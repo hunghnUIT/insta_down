@@ -23,22 +23,26 @@ def get_specific_post(shortCode):
 
     try:
         # Case 1: Post has more than one photo/video
-        if "edge_sidecar_to_children" in json_data['data']['shortcode_media']:
+        if json_data['data']['shortcode_media']['__typename'] == 'GraphSidecar':
             print('Beginning file download with urllib2...')
             # Get all nodes of the post.
-            for value in json_data['data']['shortcode_media']['edge_sidecar_to_children']['edges']:
-                if value['node']['is_video'] == False:  # Only down load image.
+            for item in json_data['data']['shortcode_media']['edge_sidecar_to_children']['edges']:
+                if item['node']['__typename'] == "GraphImage":  # Only down load image.
                     namePic = '{}instadown_picture_number_{}.jpg'.format(path,i)
-                    display_url = value['node']['display_url']
+                    display_url = item['node']['display_url']
                     urllib.request.urlretrieve(display_url, namePic)
                     i = i + 1
-        else:  # Case 2: Post has only one photo/video
-            if json_data['data']['shortcode_media']['is_video'] == False:
-                print('Beginning file #{} download with urllib2...'.format(i))
-                namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
-                display_url = json_data['data']['shortcode_media']['display_url']
-                urllib.request.urlretrieve(display_url, namePic)
-                i = i + 1
+
+        # Case 2: Post has only one photo/video            
+        elif json_data['data']['shortcode_media']['__typename'] == 'GraphImage':
+            print('Beginning file #{} download with urllib2...'.format(i))
+            namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
+            display_url = json_data['data']['shortcode_media']['display_url']
+            urllib.request.urlretrieve(display_url, namePic)
+            i = i + 1
+
+        else: print("No image found!")
+    
     except KeyError:
         print(query_hash_url)
         print(json_data)
