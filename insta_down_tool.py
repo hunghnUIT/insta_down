@@ -55,10 +55,10 @@ def get_all_post_of_user():
 
     default_first = 50
 
-    print("Enter User's URL: ")
-    input_url = input()
+    print("Enter username: ")
+    input_username = input()
 
-    url_step1 = input_url + "?__a=1"
+    url_step1 = "https://www.instagram.com/" + input_username + "/?__a=1"
     json_data_step1 = requests.get(url_step1, headers=headers).json()
     id_user = json_data_step1['graphql']['user']['id']
     # print(id_user)
