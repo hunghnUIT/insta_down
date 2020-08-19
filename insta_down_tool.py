@@ -20,34 +20,46 @@ def get_specific_post(shortCode):
         query_hash_for_specific_post, shortCode)
 
     # Now we use get method to request and load what we got into json_data
-    response = requests.get(query_hash_url, headers=headers)
-    json_data = json.loads(response.text)
-
     try:
-        # Case 1: Post has more than one photo/video
-        if json_data['data']['shortcode_media']['__typename'] == 'GraphSidecar':
-            print('Beginning file download with urllib2...')
-            # Get all nodes of the post.
-            for item in json_data['data']['shortcode_media']['edge_sidecar_to_children']['edges']:
-                if item['node']['__typename'] == "GraphImage":  # Only down load image.
-                    namePic = '{}instadown_picture_number_{}.jpg'.format(path,i)
-                    display_url = item['node']['display_url']
-                    urllib.request.urlretrieve(display_url, namePic)
-                    i = i + 1
+        response = requests.get(query_hash_url, headers=headers)
+        json_data = json.loads(response.text)
 
-        # Case 2: Post has only one photo/video            
-        elif json_data['data']['shortcode_media']['__typename'] == 'GraphImage':
-            print('Beginning file #{} download with urllib2...'.format(i))
-            namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
-            display_url = json_data['data']['shortcode_media']['display_url']
-            urllib.request.urlretrieve(display_url, namePic)
-            i = i + 1
+        try:
+            # Case 1: Post has more than one photo/video
+            if json_data['data']['shortcode_media']['__typename'] == 'GraphSidecar':
+                print('Downloading file with InstaDown...')
+                # Get all nodes of the post.
+                for item in json_data['data']['shortcode_media']['edge_sidecar_to_children']['edges']:
+                    if item['node']['__typename'] == "GraphImage":  # Only down load image.
+                        namePic = '{}instadown_picture_number_{}.jpg'.format(path,i)
+                        display_url = item['node']['display_url']
+                        urllib.request.urlretrieve(display_url, namePic)
+                        i = i + 1
 
-        else: print("No image found!")
+            # Case 2: Post has only one photo/video            
+            elif json_data['data']['shortcode_media']['__typename'] == 'GraphImage':
+                print('Downloading file #{} with InstaDown...'.format(i))
+                namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
+                display_url = json_data['data']['shortcode_media']['display_url']
+                urllib.request.urlretrieve(display_url, namePic)
+                i = i + 1
+
+            else: print("No image found!")
+            print("Completed.")
+
+        except KeyError:
+            print(query_hash_url)
+            print(json_data)
+    except json.decoder.JSONDecodeError:
+        print("Can not get photos from that user. Maybe that user doesn't exist.")
+    except requests.exceptions.MissingSchema:
+        print("Make sure your URL is correct.")
+        print("Ex: https://www.instagram.com/p/B8wydAGnk8O/")
+    except KeyboardInterrupt:
+        print("Downloading canceled. {} photos downloaded.".format(i))
+    except:
+        print("Unhandled exception :(")
     
-    except KeyError:
-        print(query_hash_url)
-        print(json_data)
 
 
 def get_all_post_of_user():
@@ -55,65 +67,77 @@ def get_all_post_of_user():
 
     default_first = 50
 
-    print("Enter username: ")
-    input_username = input()
+    print("Enter user's URL profile or username: ")
+    input_url_or_username = input()
 
-    url_step1 = "https://www.instagram.com/" + input_username + "/?__a=1"
-    json_data_step1 = requests.get(url_step1, headers=headers).json()
-    id_user = json_data_step1['graphql']['user']['id']
-    # print(id_user)
+    if("https://www.instagram.com/" not in input_url_or_username): #username entered
+        input_url_or_username = "https://www.instagram.com/"+input_url_or_username+"/"
+    url_step1 = input_url_or_username + "?__a=1" if input_url_or_username[len(input_url_or_username)-1] == '/' else input_url_or_username + "/?__a=1"
 
-    end_cursor = ""
-    while (end_cursor != None):
-        url_step2 = "https://www.instagram.com/graphql/query/?query_hash={}&variables=%7B%22id%22%3A%22{}%22%2C%22first%22%3A{}%2C%22after%22%3A%22{}%22%7D".format(
-            query_hash_for_user, id_user, default_first, end_cursor)
-        json_data_step2 = requests.get(url_step2, headers=headers).json()
+    try:
+        json_data_step1 = requests.get(url_step1, headers=headers).json()
+        id_user = json_data_step1['graphql']['user']['id']
 
-        # print(url_step2)
+        end_cursor = ""
+        while (end_cursor != None):
+            url_step2 = "https://www.instagram.com/graphql/query/?query_hash={}&variables=%7B%22id%22%3A%22{}%22%2C%22first%22%3A{}%2C%22after%22%3A%22{}%22%7D".format(
+                query_hash_for_user, id_user, default_first, end_cursor)
+            json_data_step2 = requests.get(url_step2, headers=headers).json()
 
-        for item in json_data_step2['data']['user']['edge_owner_to_timeline_media']['edges']:
-            if item['node']['__typename'] == 'GraphImage': # One photo/video in this post
-                # print(item['node']['display_url'])
-                print('Beginning file #{} download with urllib2...'.format(i))
-                namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
-                display_url = item['node']['display_url']
-                urllib.request.urlretrieve(display_url, namePic)
-                i = i + 1
-            elif item['node']['__typename'] == 'GraphSidecar': #More than one photo/video in this post
-                for node_item in item['node']['edge_sidecar_to_children']['edges']:
-                    if node_item['node']['__typename'] == 'GraphImage':
-                        print('Beginning file #{} download with urllib2...'.format(i))
-                        display_url1 = node_item['node']['display_url']
-                        namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
-                        urllib.request.urlretrieve(display_url1, namePic)
-                        i = i + 1
-        end_cursor = json_data_step2['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
-        if end_cursor is not None:
-            # Remove the last = in the end_cursor
-            end_cursor = end_cursor.replace("=", "")
-            # Append  == at last by url encode
-            end_cursor += '%3D%3D'
-
+            for item in json_data_step2['data']['user']['edge_owner_to_timeline_media']['edges']:
+                if item['node']['__typename'] == 'GraphImage': # One photo/video in this post
+                    # print(item['node']['display_url'])
+                    print('Downloading file #{} with InstaDown...'.format(i))
+                    namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
+                    display_url = item['node']['display_url']
+                    urllib.request.urlretrieve(display_url, namePic)
+                    i = i + 1
+                elif item['node']['__typename'] == 'GraphSidecar': #More than one photo/video in this post
+                    for node_item in item['node']['edge_sidecar_to_children']['edges']:
+                        if node_item['node']['__typename'] == 'GraphImage':
+                            print('Downloading file #{} with InstaDown...'.format(i))
+                            display_url1 = node_item['node']['display_url']
+                            namePic = '{}instadown_picture_number_{}.jpg'.format(path, i)
+                            urllib.request.urlretrieve(display_url1, namePic)
+                            i = i + 1
+            end_cursor = json_data_step2['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
+            if end_cursor is not None:
+                # Remove the last = in the end_cursor
+                end_cursor = end_cursor.replace("=", "")
+                # Append  == at last by url encode
+                end_cursor += '%3D%3D'  
+        print("Completed.")
+    except json.decoder.JSONDecodeError:
+        print("Can not get photos from that user. Maybe that user doesn't exist.")
+    except requests.exceptions.MissingSchema:
+        print("Make sure your URL is correct.")
+        print("Ex: https://www.instagram.com/taylorswift/")
+    except KeyboardInterrupt:
+        print("Downloading canceled. {} photos downloaded.".format(i))
+    except:
+        print("Unhandled exception :(")
 
 def main():
     # Create a directory to store data.
     global path
     os.makedirs("{}".format(path), exist_ok=True)
 
-    print("User's posts or a specific post? (1 or 2): ")
+    print("Download photos from all user's posts or from a specific post? (1 or 2): ")
     choiceType = input()
 
-    if int(choiceType) == 1:
+    if choiceType == '1':
         get_all_post_of_user()
 
-    if int(choiceType) == 2:
+    if choiceType == '2':
         print("Enter the post's URL: ")
         inputUrl = input()
 
         # Sample url a post Insta: https://www.instagram.com/p/B8wydAGnk8O/
-        protocol, nothing1, instagram_url, obj_getting, shortCode, nothing2 = inputUrl.split('/')
+        shortCode = inputUrl.split('/')[4]
         get_specific_post(shortCode)
 
 
-main()
+# main()
 
+if __name__ == "__main__":
+    main()
