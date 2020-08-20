@@ -3,14 +3,16 @@ import json
 import requests
 import urllib.request
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 i = 0  # For naming photos downloaded purpose.
 path = "./InstaDown/" #Change directory saving pics here
 
-query_hash_for_user = "9dcf6e1a98bc7f6e92953d5a61027b98"  # Case 1
-query_hash_for_specific_post = "a92f76e852576a71d3d7cef4c033a95e"  # case 2:
+query_hash_for_user = os.getenv("QUERY_HASH_FOR_USER") or "9dcf6e1a98bc7f6e92953d5a61027b98" # Case 1
+query_hash_for_specific_post = os.getenv("QUERY_HASH_FOR_POST") or "a92f76e852576a71d3d7cef4c033a95e"  # case 2:
 
-headers = {'cookie': 'sessionid=5711537494%3AsqShow1gFBehyH%3A22;',
+headers = {'cookie': os.getenv("COOKIES") or "sessionid=5711537494%3AsqShow1gFBehyH%3A22;",
 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36'}
 
 def get_specific_post(shortCode):
@@ -57,8 +59,9 @@ def get_specific_post(shortCode):
         print("Ex: https://www.instagram.com/p/B8wydAGnk8O/")
     except KeyboardInterrupt:
         print("Downloading canceled. {} photos downloaded.".format(i))
-    except:
+    except Exception as err:
         print("Unhandled exception :(")
+        print("Error:", err)
     
 
 
@@ -114,8 +117,9 @@ def get_all_post_of_user():
         print("Ex: https://www.instagram.com/taylorswift/")
     except KeyboardInterrupt:
         print("Downloading canceled. {} photos downloaded.".format(i))
-    except:
+    except Exception as err:
         print("Unhandled exception :(")
+        print("Error:", err)
 
 def main():
     # Create a directory to store data.
